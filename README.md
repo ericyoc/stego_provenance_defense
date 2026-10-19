@@ -2,8 +2,7 @@
 
 A reproducible proof-of-concept for a steganographic prompt-injection vector that
 defeats text content scanners, and a defense that contains it at the decode
-boundary — *decode-time provenance binding*. Accompanies the IEEE paper of the
-same name.
+boundary — *decode-time provenance binding*. 
 
 > **Educational / defensive security research only.** All secrets in this repo are
 > fake. Use only on systems you own or are authorized to test.
