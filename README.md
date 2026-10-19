@@ -122,18 +122,6 @@ decode origin, absent an out-of-band trusted promotion.*
 
 ---
 
-## Citation
-
-```bibtex
-@article{yocam2026decodetime,
-  author  = {Eric Yocam},
-  title   = {Decode-Time Provenance Binding Against Steganographic
-             Prompt Injection in {MCP} Agents},
-  year    = {2026},
-  note    = {Preprint}
-}
-```
-
 ## License
 
 Released for educational and defensive security research. See `LICENSE`.
