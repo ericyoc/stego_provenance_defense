@@ -27,7 +27,7 @@ independent of payload wording and carrier.
 
 ---
 
-## Results (all reproduced by the notebook)
+## Results
 
 **Attack success rate (ASR)** — six payloads across three carriers (LSB, DCT,
 metadata), including benign-worded, Base64, token-split, and homoglyph evasions;
