@@ -9,7 +9,7 @@ boundary — *decode-time provenance binding*.
 
 ---
 
-## The idea in one paragraph
+## The idea
 
 An attacker emails a victim an ordinary-looking message. A brand logo in the
 **email signature** hides an instruction via steganography (LSB, DCT, or metadata).
