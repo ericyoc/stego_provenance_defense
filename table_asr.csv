@@ -1,0 +1,5 @@
+defense,leaks,n,ASR_percent
+vulnerable,6,6,100.0
+scanner,4,6,66.7
+regex,3,6,50.0
+provenance,0,6,0.0

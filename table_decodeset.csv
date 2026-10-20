@@ -1,0 +1,4 @@
+decode_set,stego_attack,legit_call
+correct,blocked,allowed
+missing decoder,LEAK,allowed
+over-broad,blocked,false block

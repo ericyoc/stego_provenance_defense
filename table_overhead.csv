@@ -1,0 +1,6 @@
+operation,cost
+MintBinding (HMAC sign),8.52 us
+VerifyAndEnforce (HMAC verify),8.90 us
+Combined per critical call,17.42 us
+"MCP decode round-trip (warm, ref)",11.3 ms
+Added overhead vs one decode call,0.155 %

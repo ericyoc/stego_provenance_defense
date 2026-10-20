@@ -1,0 +1,5 @@
+relay_action,verifier_decision
+genuine UNTRUSTED,block
+forged TRUSTED label,block
+stripped hmac,block
+honest TRUSTED origin,ALLOW

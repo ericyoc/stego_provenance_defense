@@ -1,0 +1,8 @@
+scenario,verifies,decision
+"honest relay,  1 hops",yes,block
+"honest relay,  3 hops",yes,block
+"honest relay,  5 hops",yes,block
+"honest relay, 10 hops",yes,block
+compromised: rewrite payload,no,block
+compromised: forge TRUSTED,no,block
+compromised: strip binding,no,block
