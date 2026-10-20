@@ -9,7 +9,7 @@ boundary — *decode-time provenance binding*.
 
 ---
 
-## The idea in one paragraph
+## Summary
 
 An attacker emails a victim an ordinary-looking message. A brand logo in the
 **email signature** hides an instruction via steganography (LSB, DCT, or metadata).
@@ -28,7 +28,7 @@ presents a valid label for an unrelated trusted value. It *contains* rather than
 
 ---
 
-## Results (all reproduced by the notebook)
+## Results
 
 **Attack success rate (ASR)** — 24 payloads (three carriers × eight evasions:
 plain, benign-worded, Base64, token-split, Cyrillic homoglyph, zero-width,
