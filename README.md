@@ -9,7 +9,7 @@ boundary — *decode-time provenance binding*.
 
 ---
 
-## The idea
+## The idea in one paragraph
 
 An attacker emails a victim an ordinary-looking message. A brand logo in the
 **email signature** hides an instruction via steganography (LSB, DCT, or metadata).
@@ -20,27 +20,64 @@ its pipeline **decodes** the image, and the hidden instruction enters the agent'
 context — where, in a multi-agent MCP pipeline, it is relayed between agents as
 trusted peer output and drives a critical tool call. This is **cross-modal trust
 laundering**. The defense, **decode-time provenance binding**, mints an
-HMAC-signed `UNTRUSTED` label at the instant a concealment-reversing tool runs,
-binds it so no downstream agent can forge or strip it, and blocks any critical tool
-call whose lineage is untrusted. It *contains* rather than *detects*, so it is
-independent of payload wording and carrier.
+HMAC-signed `UNTRUSTED` label at the instant a concealment-reversing tool runs and
+has the MCP layer **maintain the provenance lineage itself**, so it blocks any
+critical tool call whose lineage is untrusted — even when a compromised agent
+presents a valid label for an unrelated trusted value. It *contains* rather than
+*detects*, so it is independent of payload wording and carrier.
 
 ---
 
-## Results
+## Results (all reproduced by the notebook)
 
-**Attack success rate (ASR)** — six payloads across three carriers (LSB, DCT,
-metadata), including benign-worded, Base64, token-split, and homoglyph evasions;
-lower is better:
+**Attack success rate (ASR)** — 24 payloads (three carriers × eight evasions:
+plain, benign-worded, Base64, token-split, Cyrillic homoglyph, zero-width,
+Unicode-confusable, HTML-comment); lower is better. The in-process **taint**
+baseline is an information-flow control that marks decode output untrusted but
+carries no cross-domain cryptographic binding:
 
-| Defense                              | Leaks | n | ASR |
-|--------------------------------------|:-----:|:-:|:---:|
-| Undefended (no checks)               | 6     | 6 | 100% |
-| Content scanner (keyword/DLP)        | 4     | 6 | 67% |
-| Regex intent parser                  | 3     | 6 | 50% |
-| **Decode-time provenance (ours)**    | **0** | 6 | **0%** |
+| Defense                              | Leaks | n  | ASR   |
+|--------------------------------------|:-----:|:--:|:-----:|
+| Undefended (no checks)               | 24    | 24 | 100%  |
+| Content scanner (keyword/DLP)        | 15    | 24 | 62.5% |
+| Regex intent parser                  | 15    | 24 | 62.5% |
+| Data-flow taint (IFC baseline)       | 0     | 24 | 0%    |
+| **Decode-time provenance (ours)**    | **0** | 24 | **0%** |
 
-**Decode-set completeness** — the one assumption to stress:
+Taint and provenance tie on single-domain ASR; they diverge under adversarial
+relaying (below), which is the point of the cryptographic binding.
+
+**Valid-label substitution** — a compromised agent presents a legitimately signed
+`TRUSTED` binding from a benign tool while omitting the `UNTRUSTED` decode origin
+that actually drives the call. The fix is that the **MCP layer maintains the lineage
+itself** and decides on its own ledger, not on the agent-supplied binding:
+
+| Enforcement                               | Decision        |
+|-------------------------------------------|-----------------|
+| Agent-supplied binding only (naive)       | **allow (leaks)** |
+| Layer-maintained, dependency omitted      | block |
+| Layer-maintained, dependency in arguments | block |
+| Layer-maintained, clean context           | allow |
+
+**Component ablation** — all three parts are necessary:
+
+| Configuration        | Honest attack | Forged `TRUSTED` |
+|----------------------|:-------------:|:----------------:|
+| Decode-marking only  | blocked       | **leaks** |
+| Marking + HMAC       | blocked       | blocked |
+| No sink mediation    | **leaks**     | **leaks** |
+| **Full mechanism**   | blocked       | blocked |
+
+**Legitimate-task utility** — an audited trusted-promotion path (re-labelling a
+specific decoded value, e.g. an OCR'd invoice number, under authorization)
+eliminates false blocks while the attack stays blocked:
+
+| Regime             | Completion | False blocks | Attack blocked |
+|--------------------|:----------:|:------------:|:--------------:|
+| No promotion       | 2/3 (67%)  | 1            | yes |
+| Trusted promotion  | 3/3 (100%) | 0            | yes |
+
+**Decode-set completeness** — the registration assumption, stressed directly:
 
 | Decode set           | Stego attack | Legitimate critical call |
 |----------------------|:------------:|:------------------------:|
@@ -58,10 +95,10 @@ resists a compromised worker:
 | Compromised: forge `TRUSTED`           | block (HMAC mismatch) |
 | Compromised: strip binding             | block (no valid label) |
 
-**Overhead** — the mechanism is effectively free at the decision point: minting
-and verifying a binding are ~8–9 µs each (~17 µs combined), versus a ~11 ms decode
-tool call — under ~0.2% added. Carriers are visually imperceptible (LSB ≈ 76 dB
-PSNR, metadata lossless).
+**Overhead** — effectively free at the decision point: minting and verifying a
+binding are ~8–9 µs each (~17 µs combined), versus a ~11 ms decode tool call — under
+~0.2% added. Carrier distortion is low (LSB ≈ 76 dB PSNR, metadata lossless; DCT
+≈ 18 dB — a distortion metric, not a perceptual-imperceptibility claim).
 
 ---
 
@@ -98,19 +135,26 @@ small); the security result does not depend on the model.
 
 ## How the defense works
 
-Two deterministic operations at the MCP layer:
+Two deterministic operations at the MCP layer, which maintains the lineage itself:
 
-- **MintBinding** (inside each decode tool): on return, stamp
-  `{payload, tool, trust, provenance}` with `trust = UNTRUSTED` iff the tool
-  reverses a concealment transform, and sign it:
-  `HMAC_k(payload‖tool‖trust‖provenance)`.
-- **VerifyAndEnforce** (at the critical-tool boundary): recompute the HMAC; if it
-  fails (forged/stripped) → block; if `trust = UNTRUSTED` → block; else allow.
+- **MintBinding** (inside each tool, at return): stamp
+  `{payload, tool, trust, provenance, deps}` with `trust = UNTRUSTED` iff the tool
+  reverses a concealment transform **or any input is `UNTRUSTED`** (contagious),
+  record the resolved input dependencies `deps`, sign it
+  `HMAC_k(payload‖tool‖trust‖provenance‖deps)`, write it to the layer's ledger, and
+  (if untrusted) add it to the context's taint set.
+- **EnforceCritical** (at the critical-tool boundary): decide on the layer's
+  **ledger**, not on an agent-supplied binding. Resolve the call's argument lineage,
+  block on any failed HMAC, incomplete lineage, `UNTRUSTED` data origin, or non-empty
+  context taint; else allow. Because the layer — not the agent — holds the lineage, a
+  compromised agent cannot hide an untrusted dependency by omitting it.
 
 **Security invariant.** Under (i) key confinement to the MCP layer, (ii) complete
-registration of decode tools, and (iii) boundary mediation of every critical call:
-*no critical tool call executes whose argument lineage includes an `UNTRUSTED`
-decode origin, absent an out-of-band trusted promotion.*
+registration of decode tools, (iii) mediation of every critical call, and (iv) the
+layer recording the complete lineage of each invocation (resolved argument
+dependencies + decode origins entering each context): *no critical tool call
+executes whose transitive lineage — data or context — includes an `UNTRUSTED` decode
+origin, unless an audited trusted promotion cleared that specific origin.*
 
 ---
 
@@ -118,11 +162,15 @@ decode origin, absent an out-of-band trusted promotion.*
 
 - The defense guards **actions**, not summary text: a laundered instruction can
   still skew the agent's prose; it cannot reach a critical tool.
-- This is a controlled testbed (six payloads, one logo, one small model, a keyword
-  scanner stand-in) — a mechanism validation, not a production-scale measurement.
+- This is a controlled testbed (24 payloads, one logo, one small model, a
+  keyword/regex scanner and an in-process taint tracker as baselines) — a mechanism
+  validation, not a production-scale measurement.
 - Security rests on every concealment-reversing tool being registered as a decode
-  tool, and on the HMAC key staying within the MCP layer (see the decode-set
-  completeness results above).
+  tool, on the HMAC key staying within the MCP layer, and on the layer capturing the
+  complete lineage of each call. The last is an implementation obligation:
+  context taint is a conservative over-approximation, so influence that never enters
+  the mediated path or any taint-tracked context is the residual (see the decode-set
+  completeness and valid-label-substitution results above).
 
 ---
 
