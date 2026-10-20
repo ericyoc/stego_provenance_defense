@@ -1,0 +1,7 @@
+payload,carrier,decoded_ok,scanner_sees,vulnerable,scanner,regex,provenance
+overt_lsb,lsb,Y,Y,LEAK,block,LEAK,block
+benign_lsb,lsb,Y,n,LEAK,LEAK,LEAK,block
+benign_dct,dct,Y,n,LEAK,LEAK,block,block
+b64_dct,dct,Y,n,LEAK,LEAK,block,block
+split_exif,exif,Y,Y,LEAK,block,LEAK,block
+homoglyph_exif,exif,Y,n,LEAK,LEAK,block,block
