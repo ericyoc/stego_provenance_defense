@@ -9,7 +9,7 @@ boundary — *decode-time provenance binding*.
 
 ---
 
-## The idea
+## The idea in one paragraph
 
 An attacker emails a victim an ordinary-looking message. A brand logo in the
 **email signature** hides an instruction via steganography (LSB, DCT, or metadata).
@@ -28,7 +28,7 @@ presents a valid label for an unrelated trusted value. It *contains* rather than
 
 ---
 
-## Results
+## Results (all reproduced by the notebook)
 
 **Attack success rate (ASR)** — 24 payloads (three carriers × eight evasions:
 plain, benign-worded, Base64, token-split, Cyrillic homoglyph, zero-width,
@@ -59,14 +59,37 @@ itself** and decides on its own ledger, not on the agent-supplied binding:
 | Layer-maintained, dependency in arguments | block |
 | Layer-maintained, clean context           | allow |
 
-**Component ablation** — all three parts are necessary:
+**Component ablation** — four components, each defending a distinct attack. Disable
+one at a time; `substitution` is in-domain, `forged relay` is a forged `TRUSTED`
+label crossing an untrusted relay to a remote verifier that holds only the presented
+binding. Crucially, HMAC alone does **not** stop substitution (the ledger does), and
+the ledger alone does **not** survive a cross-domain relay (the HMAC does):
 
-| Configuration        | Honest attack | Forged `TRUSTED` |
-|----------------------|:-------------:|:----------------:|
-| Decode-marking only  | blocked       | **leaks** |
-| Marking + HMAC       | blocked       | blocked |
-| No sink mediation    | **leaks**     | **leaks** |
-| **Full mechanism**   | blocked       | blocked |
+| Configuration                | Honest  | Substitution | Forged relay |
+|------------------------------|:-------:|:------------:|:------------:|
+| **Full mechanism**           | blocked | blocked      | blocked |
+| − decode marking             | leaks   | leaks        | leaks |
+| − cryptographic auth (HMAC)  | blocked | blocked      | **leaks** |
+| − trusted lineage tracking   | blocked | **leaks**    | blocked |
+| − sink mediation             | leaks   | leaks        | leaks |
+
+**Cross-context propagation** — taint survives an inter-agent message boundary, not
+just a tool-return handle. An untrusted decode in Agent A reaches a critical call in
+Agent B's separate context, and on a mediated channel (which the threat model
+already requires for inter-agent comms) the taint propagates and B is blocked. A
+channel the layer doesn't mediate is outside the model by construction — not a leak
+within scope:
+
+| Channel A → B                              | B's critical call |
+|--------------------------------------------|-------------------|
+| Mediated inter-agent message (in scope)    | block (taint propagated) |
+| Unmediated side channel (outside the model)| not covered |
+
+**Overhead scaling** — `MintBinding` is ~O(1) (~10–14 µs regardless of depth);
+`EnforceCritical` is linear in the dependency-closure it traverses (≈10 µs at depth
+1 → ≈0.66 ms at depth 100 → ≈6.7 ms at depth 1000) and flat (~6–7 µs) in the number
+of concurrent tainted contexts. Realistic closures (depth in the tens) stay under
+~0.1 ms.
 
 **Legitimate-task utility** — an audited trusted-promotion path (re-labelling a
 specific decoded value, e.g. an OCR'd invoice number, under authorization)
@@ -134,6 +157,15 @@ small); the security result does not depend on the model.
 ---
 
 ## How the defense works
+
+It combines **two guarantees** that are usually conflated, and it is their
+conjunction — not the HMAC alone — that is the contribution:
+
+- **Data-provenance security:** a critical action can't be authorized through a
+  forged or relabeled data dependency (the signed binding).
+- **Context-influence containment:** a critical action can't execute after an
+  untrusted instruction has influenced the execution context without authorized
+  clearance (the layer-maintained ledger + context taint).
 
 Two deterministic operations at the MCP layer, which maintains the lineage itself:
 
