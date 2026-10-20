@@ -1,0 +1,5 @@
+enforcement,decision
+agent-supplied binding only (naive),ALLOW (leaks)
+"layer-maintained, dependency omitted",block
+"layer-maintained, dependency in args",block
+"layer-maintained, clean context",allow

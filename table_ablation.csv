@@ -1,0 +1,6 @@
+configuration,honest,substitution,forged_relay
+Full mechanism,blocked,blocked,blocked
+- decode marking,LEAK,LEAK,LEAK
+- cryptographic auth (HMAC),blocked,blocked,LEAK
+- trusted lineage tracking,blocked,LEAK,blocked
+- sink mediation,LEAK,LEAK,LEAK

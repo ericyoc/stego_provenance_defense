@@ -1,0 +1,3 @@
+channel A -> B,B critical call
+mediated inter-agent message (in scope),block (taint propagated)
+unmediated side channel (outside the model),not covered
