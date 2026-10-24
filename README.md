@@ -8,6 +8,7 @@ boundary — *decode-time provenance binding*.
 > fake. Use only on systems you own or are authorized to test.
 
 ---
+<a href="https://lounge.ai/@ericyocam"><img src="https://lounge.ai/api/badge/ericyocam" alt="Eric Yocam on Lounge" height="28"></a>
 
 ## Summary
 
